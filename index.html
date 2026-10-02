@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<meta name="theme-color" content="#0b1020" />
+<title>LIBRAS Vision V3 — Texto, Voz e Duas Câmeras</title>
+<style>
+:root{--bg:#07111f;--card:#0e1a2c;--muted:#9fb1c7;--text:#f7fbff;--acc:#57e6c2;--acc2:#6ea8fe;--warn:#ffcc66;--danger:#ff7b7b;--ok:#7df5b2}
+*{box-sizing:border-box} body{margin:0;background:linear-gradient(180deg,#07111f,#0b1424 60%,#07111f);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;min-height:100vh}
+.app{max-width:900px;margin:auto;padding:18px 14px 36px}.top{display:flex;align-items:center;gap:12px;margin-bottom:14px}.logo{width:46px;height:46px;border-radius:14px;background:linear-gradient(135deg,var(--acc2),var(--acc));display:grid;place-items:center;color:#06111e;font-weight:900;font-size:20px;box-shadow:0 8px 30px #0006}.title h1{font-size:20px;margin:0}.title p{margin:2px 0 0;color:var(--muted);font-size:12px}
+.grid{display:grid;grid-template-columns:1.25fr .75fr;gap:14px}@media(max-width:760px){.grid{grid-template-columns:1fr}.app{padding:12px 10px 30px}}
+.card{background:rgba(14,26,44,.92);border:1px solid #20304a;border-radius:18px;box-shadow:0 12px 40px #0005;overflow:hidden}.camera{position:relative;aspect-ratio:3/4;background:#020711}.camera video,.camera canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}.camera canvas{pointer-events:none}.badge{position:absolute;left:10px;top:10px;padding:7px 10px;border-radius:999px;background:#05111ccc;border:1px solid #30415d;font-size:12px;color:#cfe1f7;backdrop-filter:blur(8px)}.badge.ok{border-color:#266c55;color:var(--ok)}.badge.warn{border-color:#775f25;color:var(--warn)}
+.controls{display:flex;gap:8px;flex-wrap:wrap;padding:12px}.btn{appearance:none;border:0;border-radius:12px;padding:11px 13px;font-weight:700;cursor:pointer;background:#1d2d46;color:white;border:1px solid #30415d}.btn.primary{background:linear-gradient(135deg,#2f79ff,#4ac7b0);color:#041019;border:0}.btn.danger{background:#361d27;border-color:#743246}.btn:disabled{opacity:.45;cursor:not-allowed}.side{display:flex;flex-direction:column;gap:14px}.panel{padding:14px}.label{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:7px}.result{min-height:94px;border:1px solid #263a58;background:#091522;border-radius:14px;padding:14px;font-size:26px;font-weight:800;line-height:1.3;word-break:break-word}.subresult{margin-top:8px;color:var(--muted);font-size:13px}.status{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.metric{background:#091522;border:1px solid #243552;border-radius:12px;padding:10px}.metric b{display:block;font-size:17px}.metric span{color:var(--muted);font-size:11px}.note{font-size:12px;line-height:1.45;color:#c2d0e1;background:#111d30;border:1px solid #273954;border-radius:12px;padding:11px}.note strong{color:var(--warn)}.history{max-height:190px;overflow:auto;display:flex;flex-direction:column;gap:6px}.chip{padding:8px 10px;background:#0a1727;border:1px solid #21334f;border-radius:10px;font-size:13px}.footer{margin-top:14px;color:#7f93ac;font-size:11px;text-align:center}
+.toggle{display:flex;align-items:center;justify-content:space-between;gap:12px}.switch{position:relative;width:48px;height:28px}.switch input{display:none}.slider{position:absolute;inset:0;border-radius:999px;background:#26364e}.slider:before{content:"";position:absolute;width:20px;height:20px;left:4px;top:4px;border-radius:50%;background:#fff;transition:.2s}.switch input:checked+.slider{background:#2e9b82}.switch input:checked+.slider:before{transform:translateX(20px)}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top"><div class="logo">LV</div><div class="title"><h1>LIBRAS Vision V3</h1><p>Android — câmera frontal/traseira → gesto → texto aprimorado + voz</p></div></div>
+  <div class="grid">
+    <section class="card">
+      <div class="camera">
+        <video id="video" playsinline muted></video>
+        <canvas id="overlay"></canvas>
+        <div id="camBadge" class="badge warn">Câmera parada</div>
+      </div>
+      <div class="controls">
+        <button id="startBtn" class="btn primary">Ativar câmera</button>
+        <button id="stopBtn" class="btn danger" disabled>Parar</button>
+        <button id="switchCamBtn" class="btn" disabled>🔄 Trocar câmera</button>
+        <button id="clearBtn" class="btn">Limpar texto</button>
+        <button id="speakBtn" class="btn">🔊 Falar texto</button>
+        <button id="testVoiceBtn" class="btn">🎧 Testar voz</button>
+        <button id="diagBtn" class="btn">Diagnosticar câmera</button>
+        <button id="externalBtn" class="btn" hidden>Abrir fora da prévia</button>
+      </div>
+    </section>
+
+    <aside class="side">
+      <section class="card panel" id="diagnosticPanel">
+        <div class="label">Diagnóstico da câmera</div>
+        <div id="diagBox" class="note">Ainda não executado.</div>
+      </section>
+
+      <section class="card panel">
+        <div class="label">Texto reconhecido</div>
+        <div id="result" class="result">—</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+          <button id="spaceBtn" class="btn">Espaço</button><button id="commaBtn" class="btn">,</button><button id="periodBtn" class="btn">.</button><button id="backBtn" class="btn">⌫</button>
+        </div>
+        <div id="detail" class="subresult">Aguardando câmera.</div>
+        <div class="status">
+          <div class="metric"><b id="fps">0</b><span>FPS aprox.</span></div>
+          <div class="metric"><b id="hands">0</b><span>mãos detectadas</span></div>
+        </div>
+      </section>
+
+      <section class="card panel">
+        <div class="label">Saída de voz</div>
+        <select id="voiceSelect" class="btn" style="width:100%;margin-bottom:10px"><option>Carregando vozes…</option></select>
+        <div id="voiceStatus" class="subresult">Toque em “Testar voz” para validar o áudio.</div>
+        <div class="toggle" style="margin-top:10px">
+          <div><div class="label">Voz automática</div><div style="font-size:12px;color:var(--muted)">Fala quando um sinal estabiliza.</div></div>
+          <label class="switch"><input id="autoSpeak" type="checkbox"><span class="slider"></span></label>
+        </div>
+      </section>
+
+      <section class="card panel">
+        <div class="label">Histórico</div>
+        <div id="history" class="history"><div class="chip">Nenhum sinal confirmado.</div></div>
+      </section>
+
+      <div class="note"><strong>Limitação técnica:</strong> esta versão é um demonstrador funcional de visão computacional para poucos gestos estáticos. Libras real envolve movimento, duas mãos, orientação, espaço, expressão facial e contexto linguístico. Para interpretar frases com confiabilidade é necessário integrar um modelo treinado especificamente em Libras e validá-lo com usuários e intérpretes.</div>
+    </aside>
+  </div>
+  <div class="footer">Processamento visual no navegador. A câmera não é enviada por este código a um servidor.</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+<script>
+const video = document.getElementById('video');
+const canvas = document.getElementById('overlay');
+const ctx = canvas.getContext('2d');
+const startBtn = document.getElementById('startBtn');
+const stopBtn = document.getElementById('stopBtn');
+const switchCamBtn=document.getElementById('switchCamBtn');
+const testVoiceBtn=document.getElementById('testVoiceBtn');
+const voiceSelect=document.getElementById('voiceSelect');
+const voiceStatus=document.getElementById('voiceStatus');
+const spaceBtn=document.getElementById('spaceBtn'), commaBtn=document.getElementById('commaBtn'), periodBtn=document.getElementById('periodBtn'), backBtn=document.getElementById('backBtn');
+const clearBtn = document.getElementById('clearBtn');
+const speakBtn = document.getElementById('speakBtn');
+const resultEl = document.getElementById('result');
+const detailEl = document.getElementById('detail');
+const camBadge = document.getElementById('camBadge');
+const fpsEl = document.getElementById('fps');
+const handsEl = document.getElementById('hands');
+const historyEl = document.getElementById('history');
+const autoSpeak = document.getElementById('autoSpeak');
+const diagBtn=document.getElementById('diagBtn');
+const externalBtn=document.getElementById('externalBtn');
+const diagBox=document.getElementById('diagBox');
+
+let stream=null, running=false, handsModel=null, raf=0, lastFrame=0, fpsEMA=0;
+let facingMode=localStorage.getItem('lvFacing')||'user'; let voices=[]; let voiceUnlocked=false;
+let transcript=[]; let candidate=''; let candidateFrames=0; let lastAccepted=''; let lastAcceptedAt=0;
+
+function setBadge(text, cls='warn'){camBadge.textContent=text;camBadge.className='badge '+cls}
+function resizeCanvas(){const r=video.getBoundingClientRect();canvas.width=Math.max(1,Math.round(r.width*devicePixelRatio));canvas.height=Math.max(1,Math.round(r.height*devicePixelRatio));ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0)}
+window.addEventListener('resize', resizeCanvas);
+
+function loadVoices(){
+  if(!('speechSynthesis' in window)){voiceSelect.innerHTML='<option>Voz não suportada</option>';voiceStatus.textContent='Este navegador não oferece síntese de voz.';return;}
+  voices=speechSynthesis.getVoices();
+  const br=voices.filter(v=>/^pt-BR$/i.test(v.lang));
+  const pt=voices.filter(v=>/^pt/i.test(v.lang));
+  const list=br.length?br:(pt.length?pt:voices);
+  voiceSelect.innerHTML='';
+  list.forEach((v,i)=>{const o=document.createElement('option');o.value=voices.indexOf(v);o.textContent=`${v.name} — ${v.lang}`;voiceSelect.appendChild(o);});
+  if(!list.length) voiceSelect.innerHTML='<option>Voz padrão do aparelho</option>';
+}
+if('speechSynthesis' in window){speechSynthesis.onvoiceschanged=loadVoices; setTimeout(loadVoices,100);}
+function unlockVoice(){
+  if(!('speechSynthesis' in window)) return false;
+  try{ const u=new SpeechSynthesisUtterance('');u.volume=0;speechSynthesis.speak(u);speechSynthesis.cancel();voiceUnlocked=true;return true;}catch(_){return false;}
+}
+function speak(text){
+  text=(text||'').trim(); if(!text || !('speechSynthesis' in window)) return;
+  try{ speechSynthesis.cancel(); speechSynthesis.resume(); const u=new SpeechSynthesisUtterance(text); u.lang='pt-BR'; u.rate=.92; u.pitch=1;
+    const idx=Number(voiceSelect.value); if(Number.isInteger(idx)&&voices[idx]) u.voice=voices[idx];
+    u.onstart=()=>voiceStatus.textContent='🔊 Falando…'; u.onend=()=>voiceStatus.textContent='Voz concluída.'; u.onerror=e=>voiceStatus.textContent='Falha na voz: '+(e.error||'erro do navegador');
+    speechSynthesis.speak(u);
+  }catch(e){voiceStatus.textContent='Falha ao iniciar voz: '+e.message;}
+}
+function renderTranscript(){
+  let t=transcript.join(' ').replace(/\s+([,.!?])/g,'$1').replace(/\s+/g,' ').trim();
+  if(t) t=t.charAt(0).toUpperCase()+t.slice(1); resultEl.textContent=t||'—'; return t;
+}
+function addToken(token){ transcript.push(token); renderTranscript(); }
+
+
+function extended(lm, tip, pip, mcp){
+  const wrist=lm[0];
+  const d=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z);
+  return d(lm[tip], wrist) > d(lm[pip], wrist) * 1.12 && d(lm[tip],lm[mcp]) > d(lm[pip],lm[mcp])*.92;
+}
+function thumbOpen(lm){ const d=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z); return d(lm[4],lm[5]) > d(lm[3],lm[5])*1.28; }
+
+// Classificador experimental de algumas configurações de mão estáticas.
+// Não representa um intérprete completo de Libras.
+function classifyHand(lm){
+  const idx=extended(lm,8,6,5), mid=extended(lm,12,10,9), ring=extended(lm,16,14,13), pink=extended(lm,20,18,17), th=thumbOpen(lm);
+  const openCount=[idx,mid,ring,pink].filter(Boolean).length;
+  if(openCount===4 && th) return {label:'MÃO ABERTA',score:.82};
+  if(openCount===0 && !th) return {label:'PUNHO',score:.80};
+  if(idx && !mid && !ring && !pink && th) return {label:'L',score:.84};
+  if(idx && mid && !ring && !pink && !th) return {label:'V',score:.82};
+  if(!idx && !mid && !ring && pink && !th) return {label:'I',score:.78};
+  if(openCount===4 && !th) return {label:'B',score:.78};
+  return {label:'…',score:0};
+}
+
+function accept(label, score){
+  if(label==='…') {candidate=''; candidateFrames=0; return;}
+  if(candidate===label) candidateFrames++; else {candidate=label;candidateFrames=1;}
+  detailEl.textContent=`Detectando: ${label} · confiança heurística ${(score*100).toFixed(0)}% · estabilização ${Math.min(candidateFrames,12)}/12`;
+  if(candidateFrames<12) return;
+  const now=Date.now();
+  if(label===lastAccepted && now-lastAcceptedAt<1800) return;
+  lastAccepted=label; lastAcceptedAt=now;
+  transcript.push(label);
+  renderTranscript();
+  const chip=document.createElement('div');chip.className='chip';chip.textContent=`${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})} — ${label}`;
+  if(historyEl.firstElementChild?.textContent==='Nenhum sinal confirmado.') historyEl.innerHTML='';
+  historyEl.prepend(chip);
+  if(autoSpeak.checked) speak(label);
+  candidateFrames=0;
+}
+
+function onResults(res){
+  const w=canvas.clientWidth, h=canvas.clientHeight;
+  ctx.clearRect(0,0,w,h);
+  const list=res.multiHandLandmarks||[]; handsEl.textContent=list.length;
+  if(list.length){
+    for(const lm of list){
+      drawConnectors(ctx,lm,HAND_CONNECTIONS,{color:'#57e6c2',lineWidth:3});
+      drawLandmarks(ctx,lm,{color:'#6ea8fe',lineWidth:1,radius:2});
+    }
+    const pred=classifyHand(list[0]); accept(pred.label,pred.score);
+    setBadge('Mão detectada','ok');
+  } else {
+    candidate='';candidateFrames=0; detailEl.textContent='Nenhuma mão detectada. Enquadre a mão com boa iluminação.'; setBadge('Procurando mãos','warn');
+  }
+}
+
+async function initModel(){
+  if(handsModel) return;
+  handsModel=new Hands({locateFile:(f)=>`https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`});
+  handsModel.setOptions({maxNumHands:2,modelComplexity:1,minDetectionConfidence:.65,minTrackingConfidence:.60});
+  handsModel.onResults(onResults);
+}
+
+function inIframe(){ try{return window.self!==window.top}catch(_){return true} }
+function cameraPolicyAllowed(){
+  try{
+    if(document.permissionsPolicy?.allowsFeature) return document.permissionsPolicy.allowsFeature('camera');
+    if(document.featurePolicy?.allowsFeature) return document.featurePolicy.allowsFeature('camera');
+  }catch(_){}
+  return null;
+}
+async function cameraPermissionState(){
+  try{
+    if(!navigator.permissions?.query) return 'indisponível';
+    const p=await navigator.permissions.query({name:'camera'});
+    return p.state || 'desconhecido';
+  }catch(_){ return 'não suportado'; }
+}
+async function diagnoseCamera(show=true){
+  const lines=[];
+  const secure=window.isSecureContext || location.hostname==='localhost';
+  const framed=inIframe();
+  const policy=cameraPolicyAllowed();
+  const media=!!navigator.mediaDevices?.getUserMedia;
+  const perm=await cameraPermissionState();
+  let devices='não verificado';
+  try{
+    if(navigator.mediaDevices?.enumerateDevices){
+      const all=await navigator.mediaDevices.enumerateDevices();
+      devices=String(all.filter(d=>d.kind==='videoinput').length);
+    }
+  }catch(_){devices='erro ao listar'}
+  lines.push(`HTTPS/contexto seguro: ${secure?'SIM':'NÃO'}`);
+  lines.push(`Dentro de prévia/iframe: ${framed?'SIM':'NÃO'}`);
+  lines.push(`Política permite câmera: ${policy===null?'não detectável':policy?'SIM':'NÃO'}`);
+  lines.push(`getUserMedia disponível: ${media?'SIM':'NÃO'}`);
+  lines.push(`Permissão reportada: ${perm}`);
+  lines.push(`Câmeras visíveis ao navegador: ${devices}`);
+  if(framed) lines.push('AÇÃO: abra o aplicativo diretamente em uma página HTTPS, fora da prévia incorporada.');
+  if(policy===false) lines.push('AÇÃO: o container atual bloqueia câmera por Permissions-Policy; isso não pode ser liberado pelo JavaScript da página.');
+  if(!secure) lines.push('AÇÃO: publique em HTTPS.');
+  if(!media) lines.push('AÇÃO: use Chrome/Edge atualizados em Android e abra a página diretamente.');
+  const report=lines.join('\n');
+  if(show){diagBox.textContent=report; diagBox.style.whiteSpace='pre-wrap';}
+  externalBtn.hidden=!framed;
+  return {secure,framed,policy,media,perm,report};
+}
+function humanCameraError(e){
+  const n=e?.name||'Erro';
+  if(n==='NotAllowedError' || n==='PermissionDeniedError') return 'Acesso à câmera bloqueado. Se as permissões do Android já estão liberadas, abra a página fora da prévia/iframe e verifique a permissão específica do site no Chrome.';
+  if(n==='NotFoundError' || n==='DevicesNotFoundError') return 'Nenhuma câmera compatível foi encontrada pelo navegador.';
+  if(n==='NotReadableError' || n==='TrackStartError') return 'A câmera existe, mas está ocupada ou indisponível. Feche outros apps que estejam usando a câmera e tente novamente.';
+  if(n==='OverconstrainedError' || n==='ConstraintNotSatisfiedError') return 'A câmera não aceitou a configuração solicitada. Tentarei uma configuração mais simples.';
+  if(n==='SecurityError') return 'O navegador bloqueou a câmera por regra de segurança do contexto atual.';
+  return `${n}: ${e?.message||'falha ao abrir câmera'}`;
+}
+async function requestCameraWithFallback(){
+  const attempts=[
+    {video:{facingMode:{ideal:facingMode},width:{ideal:720},height:{ideal:1280}},audio:false},
+    {video:{facingMode:{ideal:facingMode}},audio:false},
+    {video:true,audio:false}
+  ];
+  let last;
+  for(const c of attempts){
+    try{return await navigator.mediaDevices.getUserMedia(c)}catch(e){last=e; if(e?.name==='NotAllowedError'||e?.name==='SecurityError') break;}
+  }
+  throw last||new Error('Falha desconhecida');
+}
+async function start(){
+  const d=await diagnoseCamera(true);
+  if(!d.secure){ setBadge('HTTPS necessário','warn'); detailEl.textContent='Abra esta aplicação em HTTPS.'; return; }
+  if(!d.media){ setBadge('Câmera indisponível','warn'); detailEl.textContent='Este navegador/contexto não disponibiliza getUserMedia.'; return; }
+  if(d.framed && d.policy===false){ setBadge('Prévia bloqueia câmera','warn'); detailEl.textContent='A prévia incorporada bloqueia a câmera. Use “Abrir fora da prévia” ou publique e abra o endereço HTTPS diretamente no Chrome.'; return; }
+  try{
+    setBadge('Abrindo câmera…','warn');
+    await initModel();
+    stream=await requestCameraWithFallback();
+    video.srcObject=stream; await video.play(); resizeCanvas(); running=true; startBtn.disabled=true; stopBtn.disabled=false; switchCamBtn.disabled=false; applyMirror(); setBadge(facingMode==='user'?'Câmera frontal ativa':'Câmera traseira ativa','ok'); lastFrame=performance.now(); loop();
+  }catch(e){
+    console.error(e); setBadge('Falha na câmera','warn'); detailEl.textContent=humanCameraError(e);
+    diagBox.textContent=(await diagnoseCamera(false)).report+'\n\nERRO: '+humanCameraError(e); diagBox.style.whiteSpace='pre-wrap';
+  }
+}
+async function loop(){
+  if(!running) return;
+  const t=performance.now(), dt=t-lastFrame; lastFrame=t; const inst=dt>0?1000/dt:0; fpsEMA=fpsEMA?fpsEMA*.9+inst*.1:inst; fpsEl.textContent=Math.round(fpsEMA);
+  if(video.readyState>=2){ try{ await handsModel.send({image:video}); }catch(e){console.error(e);} }
+  raf=requestAnimationFrame(loop);
+}
+function applyMirror(){const tr=facingMode==='user'?'scaleX(-1)':'none';video.style.transform=tr;canvas.style.transform=tr;}
+async function switchCamera(){
+  facingMode=facingMode==='user'?'environment':'user'; localStorage.setItem('lvFacing',facingMode);
+  if(!running){applyMirror();return;}
+  if(stream) stream.getTracks().forEach(t=>t.stop());
+  try{stream=await requestCameraWithFallback();video.srcObject=stream;await video.play();applyMirror();setBadge(facingMode==='user'?'Câmera frontal ativa':'Câmera traseira ativa','ok');}
+  catch(e){facingMode=facingMode==='user'?'environment':'user';localStorage.setItem('lvFacing',facingMode);detailEl.textContent=humanCameraError(e);}
+}
+function stop(){running=false;cancelAnimationFrame(raf);if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}video.srcObject=null;ctx.clearRect(0,0,canvas.width,canvas.height);startBtn.disabled=false;stopBtn.disabled=true;switchCamBtn.disabled=true;handsEl.textContent='0';fpsEl.textContent='0';setBadge('Câmera parada','warn');detailEl.textContent='Aguardando câmera.'}
+startBtn.addEventListener('click',()=>{unlockVoice();start();}); stopBtn.addEventListener('click',stop); switchCamBtn.addEventListener('click',switchCamera);
+testVoiceBtn.addEventListener('click',()=>{unlockVoice();speak('Teste de voz do LIBRAS Vision. Áudio funcionando.');});
+diagBtn.addEventListener('click',()=>diagnoseCamera(true));
+externalBtn.addEventListener('click',()=>{ try{ window.open(location.href,'_blank','noopener,noreferrer'); }catch(_){} });
+window.addEventListener('DOMContentLoaded',()=>{diagnoseCamera(true);loadVoices();applyMirror();});
+clearBtn.addEventListener('click',()=>{transcript=[];renderTranscript();historyEl.innerHTML='<div class="chip">Nenhum sinal confirmado.</div>';lastAccepted='';});
+speakBtn.addEventListener('click',()=>{unlockVoice();speak(renderTranscript());});
+spaceBtn.addEventListener('click',()=>addToken(' ')); commaBtn.addEventListener('click',()=>addToken(',')); periodBtn.addEventListener('click',()=>addToken('.')); backBtn.addEventListener('click',()=>{transcript.pop();renderTranscript();});
+window.addEventListener('pagehide',stop);
+</script>
+</body>
+</html>
