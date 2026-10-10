@@ -1,23 +1,22 @@
-# Libras Ao Vivo 5.5
+# Libras Ao Vivo 5.6 — vídeos autênticos por reconhecimento de fala
 
-## O que está incluído
-- Um `index.html` independente, sem CDN ou bibliotecas JavaScript externas.
-- 30 termos com **animações ilustrativas genéricas** de avatar (não representam sinais corretos de Libras).
-- Reprodução automática de vídeos MP4/WebM de sinais que o usuário tenha obtido legalmente e validado.
-- Legendas por reconhecimento de fala do navegador, quando disponível, ou entrada manual.
-- Fila automática de termos, controle de reprodução, histórico e exportação TXT.
-- Teste de microfone com medidor de intensidade e mensagens de diagnóstico.
-
-## Atenção
-**O projeto NÃO contém 30 sinais validados em Libras nem traduz frases de maneira linguisticamente correta.** As animações demonstram apenas o fluxo visual e são rotuladas como ilustrações. Somente os vídeos cadastrados pelo responsável podem conter Libras real, desde que validados por usuários fluentes e intérpretes. A correspondência textual exata e reprodução palavra a palavra não constituem interpretação profissional.
+## O que realmente acompanha o pacote
+- `index.html`: aplicativo completo e independente de frameworks; layout responsivo, captura de voz via Web Speech API nos navegadores compatíveis, diagnóstico de microfone, legendas, histórico, fila sequencial, reprodução de mídia, catálogo pesquisável e upload de vídeos persistido por IndexedDB.
+- O exemplo `cachorro` possui **vídeo de sinalização real**, de Fred Maranhão (2007), servido externamente pelo Wikimedia Commons: https://commons.wikimedia.org/wiki/File:Libras-cachorro.ogv . Licença CC BY-SA 3.0, atribuição necessária. Para distribuir ou modificar, siga a licença. O pacote não contém esse vídeo, apenas a URL; não funciona offline sem cópia devidamente licenciada.
+- Demais termos (mais de 100) são ENTRADAS DE CATÁLOGO, não são vídeos nem sinais validados. Sem um vídeo cadastrado, o aplicativo informa ausência de sinal — não inventa um gesto.
 
 ## Como testar
-Hospede `index.html` por HTTPS (p.ex. GitHub Pages). No celular, abra no navegador compatível, teste microfone, encerre o teste e inicie a escuta. O Web Speech API pode depender do serviço de reconhecimento do navegador, da conexão e de permissões. Para testar sem captura, digite uma frase e toque em **Interpretar biblioteca**.
+1. Publique o `index.html` em hospedagem HTTPS (por exemplo GitHub Pages). Em `file://` o microfone e IndexedDB podem não funcionar adequadamente.
+2. Digite `cachorro` e toque em 'Procurar e reproduzir' para testar o vídeo real (requer internet e suporte a OGV do navegador).
+3. Clique 'Testar microfone'; autorize a permissão, observe a barra e encerre. Clique 'Iniciar escuta' e fale `cachorro`.
+4. Para cadastrar sinais próprios: informe palavra, arquivo MP4/WebM/OGV e licença/autoria. O sistema armazena no IndexedDB (somente no dispositivo atual). A biblioteca local pode ser apagada pelo navegador ou modo privado.
 
-## Colocar vídeos autênticos no pacote
-O botão de cadastro aceita um vídeo MP4/WebM por termo, armazenado na sessão como URL local de objeto; ao fechar a página, o cadastro desaparece. Para distribuição offline permanente, os arquivos de vídeos licenciados deverão ser disponibilizados com o pacote, e o carregamento por caminhos relativos deverá ser desenvolvido. Evite afirmar cobertura de Libras sem revisão humana.
+## Limites
+- Transcrever fala não é traduzir contexto para Libras. A associação exata entre palavras e vídeos é uma **demonstração de glossário**, não tradução fluente. Para palestras reais, mantenha intérprete de Libras.
+- Reconhecimento Web Speech é dependente do navegador e pode exigir conexão a serviço externo; não prometa processamento offline ou privacidade de áudio sem verificar o fornecedor do navegador.
+- Não está incluso avatar 3D capaz de executar sinais validados; os sinais disponíveis são apresentados como vídeos reais. Um avatar real requer animação articulada validada, expressões não manuais, gramática e direitos de uso de dados de movimento.
+- Vídeo Wikimedia em formato OGV pode não funcionar no Chrome Android. O aplicativo reporta falha de reprodução; substitua o item por MP4/WebM autorizado para compatibilidade.
+- Para comercializar: verificar a licença de cada vídeo, direitos de imagem e voz e LGPD, bem como validação linguística, testes Android e acessibilidade.
 
-## Testes recomendados
-Android Chrome via HTTPS, permissões, interrupções de sessão, ausência de rede, feedback de usuários surdos, qualidade linguística dos vídeos, sincronização, desempenho e acessibilidade.
-
-Copyright © 2026 Nailson Rodrigues de Lima.
+## Autor
+Copyright © 2026 Nailson Rodrigues de Lima (código do projeto). Direitos dos vídeos pertencem aos respectivos titulares.
